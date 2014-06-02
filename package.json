@@ -1,6 +1,6 @@
 {
   "name": "postgres-repo",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "A light alternative to a full ORM that simply wraps a repository pattern around PostgreSQL calls",
   "keywords": [
     "postgres",
