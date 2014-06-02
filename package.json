@@ -1,0 +1,39 @@
+{
+  "name": "postgres-repo",
+  "version": "0.0.0",
+  "description": "A light alternative to a full ORM that simply wraps a repository pattern around PostgreSQL calls",
+  "keywords": [
+    "postgres",
+    "postgresql",
+    "repository",
+    "sticky",
+    "orm",
+    "database",
+    "datastore"
+  ],
+  "author": {
+    "name": "Brandon Valosek",
+    "email": "bvalosek@gmail.com",
+    "url": "http://bvalosek.com"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "tape": "^2.13.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:bvalosek/postgres-repo.git"
+  },
+  "dependencies": {
+    "debug": "^0.8.1",
+    "es6-promise": "^1.0.0",
+    "pg": "^3.2.0"
+  }
+}

@@ -1,0 +1,6 @@
+# deps
+node_modules
+public/bower_components
+
+# output
+dist
