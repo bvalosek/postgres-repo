@@ -10,11 +10,16 @@ var debug   = require('debug')('PostgresRepo');
  * @param {string} table Table name
  * @constructor
  */
-function PostgresRepo(client, table)
+function PostgresRepo(client, table, primaryKey)
 {
+  if (!client)
+    throw new TypeError('client');
+  if (!table)
+    throw new TypeError('table');
+
   this._client     = client;
   this._table      = table;
-  this._primaryKey = 'id';
+  this._primaryKey = primaryKey || 'id';
 }
 
 /**

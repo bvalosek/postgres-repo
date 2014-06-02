@@ -14,10 +14,29 @@ $ npm install postgres-repo
 
 ## Usage
 
+Create the repo by passing in an existing (connected) postgres client and the
+table name. It will *not* be escaped by double-quotes, allowing it to be case
+insensitive.
+
 ```javascript
 var PostgresRepo = require('postgres-repo');
-var users = new PostgresRepo('users');
+var Client       = require('pg').Client;
 
+var client = new Client(process.env.DATABASE_URL);
+client.connect();
+
+var users = new PostgresRepo(client, 'users');
+```
+
+You can also specify a different primary key (default is simply `id`);
+
+```javascript
+var users = new PostgresRepo(client, 'users', 'user_id');
+```
+
+Basic CRUD-ish operations:
+
+```javascript
 // Get a single item by its primary key
 users.get(id).then(function(user) { ... });
 
