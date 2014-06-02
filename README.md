@@ -43,10 +43,6 @@ users.get(id).then(function(user) { ... });
 // Get all items
 users.getAll().then(function(users) { ... });
 
-// Run a query and get the results
-users.query('select * from users where points > $1', [totalPoints])
-  .then(function(users) { ... });
-
 // Add a row
 users.add({ email: 'cool@awesome.net' }).then(function(user) { ... });
 
@@ -55,6 +51,15 @@ users.remove({ id: 123 }).then(function() { ... });
 
 // Update a row
 users.update({ id: 123, email: 'new@email.net' }).then(function(user) { ... });
+```
+
+Queries are handled by the `pg` driver, such as parametric sql statements:
+
+```javascript
+// Run a query and get the results
+users.query('select * from users where points > $1', [totalPoints])
+  .then(function(users) { ... });
+
 ```
 
 ## Testing
