@@ -3,8 +3,8 @@
 [![Build Status](https://travis-ci.org/bvalosek/postgres-repo.png?branch=master)](https://travis-ci.org/bvalosek/postgres-repo)
 [![NPM version](https://badge.fury.io/js/postgres-repo.png)](http://badge.fury.io/js/postgres-repo)
 
-A light alternative to a full ORM that simply wraps a repository pattern around
-PostgreSQL calls.
+A light, promise-based alternative to a full ORM that simply wraps a repository
+pattern around basic PostgreSQL calls.
 
 ## Installation
 
