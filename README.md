@@ -29,7 +29,7 @@ users.query('select * from users where points > $1', [totalPoints])
   .then(function(users) { ... });
 
 // Add a row
-users.add({ email: 'cool@awesome.net }).then(function(user) { ... });
+users.add({ email: 'cool@awesome.net' }).then(function(user) { ... });
 
 // Remove a row
 users.remove({ id: 123 }).then(function() { ... });
