@@ -108,7 +108,7 @@ PostgresRepo.prototype.remove = function(obj)
  */
 PostgresRepo.prototype.add = function(obj)
 {
-  var sql     = 'INSERT INTO ' + this._table + '(';
+  var sql     = 'INSERT INTO ' + this._table + ' (';
   var sValues = '';
   var values  = [];
 
