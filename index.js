@@ -1,23 +1,23 @@
 module.exports = PostgresRepo;
 
-var Promise = require('es6-promise').Promise;
-var Client  = require('pg').Client;
+var Promise = require('bluebird').Promise;
 var debug   = require('debug')('PostgresRepo');
+var pg      = require('pg');
+var Client  = require('pg').Client;
 
 /**
- * Repository with an underlying postgresql store.
- * @param {Client} client A connected postgres client instance
+ * Repository interface around a PostgreSQL table
+ * @param {string|Client} connection the postgres connection string or a client instance
  * @param {string} table Table name
+ * @param {string} primaryKey table primary key
  * @constructor
  */
-function PostgresRepo(client, table, primaryKey)
+function PostgresRepo(connection, table, primaryKey)
 {
-  if (!client)
-    throw new TypeError('client');
-  if (!table)
-    throw new TypeError('table');
+  if (!connection)
+    throw new TypeError('connectionString');
 
-  this._client     = client;
+  this._connection = connection;
   this._table      = table;
   this._primaryKey = primaryKey || 'id';
 }
@@ -26,42 +26,90 @@ function PostgresRepo(client, table, primaryKey)
  * Run a SQL query and return an array of objects (or an array of arrays of
  * objects in the case of a multi-table join query).
  * @param {string} sql
- * @param {array.<any>} params
+ * @param {object} params
  * @return {Promise}
  */
 PostgresRepo.prototype.query = function(sql, params)
 {
-  params    = params || [];
-  sql       = sql.replace(/$table/g, this._table);
+  params = params || [];
+
+  // Translate the args
+  var _ref = this._prepareArgs(sql, params);
+  sql = _ref.sql;
+  params = _ref.args;
 
   debug('query: %s', sql);
   debug('params: %s', params.join(','));
 
+  // build the query
+  var query = {
+    text: sql,
+    values: params,
+    rowMode: 'array'
+  };
+
+  // Attempt to get a client from the pool and execute the query
   var _this = this;
-  return new Promise(function(resolve, reject) {
-    var opts = {
-      text: sql,
-      values: params,
-      rowMode: 'array'
-    };
-
-    var q = _this._client.query(opts);
-
-    q.on('error', function(err) {
-      debug('error: %s', err);
-      return reject(err);
+  return this._getClient().then(function(client) {
+    return new Promise(function(resolve, reject) {
+      client.query(query, function(err, result) {
+        _this._freeClient(client);
+        _this._logPool();
+        if (err) return reject (err);
+        resolve(result.rows);
+      });
     });
-
-    q.on('end', function(result) {
-      debug('total rows: %d', result.rows.length);
-      resolve(result.rows);
-    });
-
-    q.on('row', function(row, acc) {
-      acc.addRow(_this._processRow(row, acc.fields));
-    });
-
   });
+
+};
+
+/**
+ * debug out info about the pool after every query
+ * @private
+ */
+PostgresRepo.prototype._logPool = function()
+{
+  var connection = this._connection;
+
+  if (typeof connection !== 'string') return;
+
+  // log info about connection pool
+  var pool = pg.pools.getOrCreate(connection);
+  var size = pool.getPoolSize();
+  var available = pool.availableObjectsCount();
+  debug('pool: %d / %d', size - available, size);
+};
+
+/**
+ * Use either the single injected client or use the pg global to get one from
+ * the pool.
+ * @return {Promise} Client
+ */
+PostgresRepo.prototype._getClient = function()
+{
+  var connection = this._connection;
+  if (typeof connection === 'string') {
+    return new Promise(function(resolve, reject) {
+      pg.connect(connection, function(err, client, done) {
+        if (err) return reject (err);
+        client.done = done;
+        resolve(client);
+      });
+    });
+  }
+
+  // Use a single connection
+  return Promise.resolve(connection);
+};
+
+/**
+ * Free the client if its from the pool, otherwise nop
+ * @param {Client} client
+ */
+PostgresRepo.prototype._freeClient = function(client)
+{
+  if (client.done)
+    client.done();
 };
 
 /**
@@ -161,33 +209,44 @@ PostgresRepo.prototype.update = function(item)
 };
 
 /**
- * Handle a raw row we get from the DB
+ * Given a hash and parametric sql string, swap all of the @vars into $N args
+ * and create an array
+ * @param {string} sql Parametric sql string
+ * @param {object} hash All of the named arguments
+ * @return {{sql:string, args:array.<any>}}
  */
-PostgresRepo.prototype._processRow = function(row, fields)
+PostgresRepo.prototype._prepareArgs = function(sql, hash)
 {
-  var objs = [];
+  var args = [];
 
-  // Iterate over all of the returned columns and split them out across the
-  // table boundries into seperate anonymous objects
-  var obj       = {};
-  var empty     = true;
-  var lastTable = null;
-  for (var n = 0; n < row.length; n++) {
-    var value = row[n];
-    var field = fields[n];
-    var table = field.tableID;
+  var keys = sql.match(/@\S+/g);
+  var aKeys = sql.match(/\$\d+/g);
 
-    obj[field.name] = value;
-    lastTable = table;
+  if (keys && aKeys)
+    throw new Error(
+      'Cannot use both array-style and object-style parametric values');
+
+  // Array-style (native)
+  if (aKeys) {
+    return { sql: sql, args: hash };
   }
 
-  objs.push(obj);
+  // No params
+  if (!keys) {
+    return { sql: sql, args: args };
+  }
 
-  // If we have a multi-object / join query, each row should be an array
-  if (objs.length > 1)
-    return objs;
-  else
-    return objs[0];
+  var n = 1;
+  keys.forEach(function(key) {
+    key = key.substr(1);
+    var val = hash[key];
+    if (val === undefined)
+      throw new Error('No value for @' + key + ' provided');
+    args.push(val);
+    sql = sql.replace('@' + key, '$' + n++);
+  });
+
+  return { sql: sql, args: args };
 };
 
 function firstOrNull(result)

@@ -11,18 +11,12 @@ function MockClient()
   var sql = this.sql = [];
   var params = this.params = [];
   var ret = this.ret = RET;
-  this.query = function(opts) {
-
+  this.query = function(opts, cb) {
     // store what was passed
     sql.push(opts.text);
     params.push(opts.values);
 
-    // Fake it out
-    var q = new EventEmiiter();
-    process.nextTick(function() {
-      q.emit('end', { rows: RET });
-    });
-    return q;
+    cb(null, { rows: RET });
   };
 }
 
@@ -94,13 +88,46 @@ test('get all', function(t) {
   });
 });
 
-test('query', function(t) {
+test('query with arrays', function(t) {
   t.plan(2);
   var client = new MockClient();
   var repo   = new PostgresRepo(client, 'user');
 
-  repo.query('shit brah', [123]).then(function() {
-    t.deepEqual(client.sql, ['shit brah']);
+  repo.query('shit brah $1', [123]).then(function() {
+    t.deepEqual(client.sql, ['shit brah $1']);
     t.deepEqual(client.params, [[123]]);
+  });
+});
+
+test('query with objs', function(t) {
+  t.plan(2);
+  var client = new MockClient();
+  var repo   = new PostgresRepo(client, 'user');
+
+  repo.query('shit brah @id', {id: 123}).then(function() {
+    t.deepEqual(client.sql, ['shit brah $1']);
+    t.deepEqual(client.params, [[123]]);
+  });
+});
+
+test('throw when both', function(t) {
+  t.plan(1);
+  var client = new MockClient();
+  var repo   = new PostgresRepo(client, 'user');
+
+  t.throws(function() {
+    repo.query('shit brah @id $2', {id: 123}).then(function() {
+    });
+  });
+});
+
+test('throw when missing', function(t) {
+  t.plan(1);
+  var client = new MockClient();
+  var repo   = new PostgresRepo(client, 'user');
+
+  t.throws(function() {
+    repo.query('shit brah @id', {_id: 123}).then(function() {
+    });
   });
 });
