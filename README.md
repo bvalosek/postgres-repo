@@ -14,18 +14,13 @@ $ npm install postgres-repo
 
 ## Usage
 
-Create the repo by passing in an existing (connected) postgres client and the
-table name. It will *not* be escaped by double-quotes, allowing it to be case
-insensitive.
+Create a new repo by providing the database connection URL and a table name.
+This will use the built-in connection pools setup on the global `pg` object.
 
-```javascript
+```
 var PostgresRepo = require('postgres-repo');
-var Client       = require('pg').Client;
 
-var client = new Client(process.env.DATABASE_URL);
-client.connect();
-
-var users = new PostgresRepo(client, 'users');
+var users = new PostgresRepo(DATABASE_URL, 'user');
 ```
 
 You can also specify a different primary key (default is simply `id`);
@@ -34,32 +29,48 @@ You can also specify a different primary key (default is simply `id`);
 var users = new PostgresRepo(client, 'users', 'user_id');
 ```
 
-Basic CRUD-ish operations:
+Get a row from the table by its primary key
 
 ```javascript
-// Get a single item by its primary key
 users.get(id).then(function(user) { ... });
-
-// Get all items
-users.getAll().then(function(users) { ... });
-
-// Add a row
-users.add({ email: 'cool@awesome.net' }).then(function(user) { ... });
-
-// Remove a row
-users.remove({ id: 123 }).then(function() { ... });
-
-// Update a row
-users.update({ id: 123, email: 'new@email.net' }).then(function(user) { ... });
 ```
 
-Queries are handled by the `pg` driver, such as parametric sql statements:
+Get an array of all of the items in the table
 
 ```javascript
-// Run a query and get the results
-users.query('select * from users where points > $1', [totalPoints])
-  .then(function(users) { ... });
+users.getAll().then(function(users) { ... });
+```
 
+Add a new row to the table. The returned representation will be what is stored,
+including any default values set during the `INSERT` command.
+
+```javascript
+var user = { email: 'billy@awesome.net', name: 'Billy' };
+users.add().then(function(user) { ... });
+```
+
+Remove a row that correlates to some object representation. This checks the
+identity primary key (e.g, `id`) to execute the `DELETE` command.
+
+```javascript
+users.remove(user).then(function() { ... });
+```
+
+Update a row that correlates to some object representation. This checks the
+identity primary key and executes an `UPDATE` command.
+
+```javascript
+user.firstName = 'Bob';
+users.update(user).then(function(user) { ... });
+```
+
+Execute a query with parametric values (automatically escaped appropriately by
+the underlying `pg` driver)
+
+```javascript
+users.query('select * from user where points > @points and group = @group',
+  { points: 100, group: 'ballers' })
+    .then(function(users) { ... });
 ```
 
 ## Testing
