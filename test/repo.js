@@ -1,7 +1,5 @@
 var test         = require('tape');
 var PostgresRepo = require('../');
-var Promise      = require('es6-promise').Promise;
-var EventEmiiter = require('events').EventEmitter;
 
 var RET = [{}];
 
