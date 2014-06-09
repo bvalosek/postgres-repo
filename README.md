@@ -60,7 +60,7 @@ Update a row that correlates to some object representation. This checks the
 identity primary key and executes an `UPDATE` command.
 
 ```javascript
-user.firstName = 'Bob';
+user.name = 'Bob';
 users.update(user).then(function(user) { ... });
 ```
 
