@@ -1,9 +1,10 @@
 module.exports = PostgresRepo;
 
-var Promise = require('bluebird').Promise;
-var debug   = require('debug')('PostgresRepo');
-var pg      = require('pg');
-var Client  = require('pg').Client;
+var Promise   = require('bluebird').Promise;
+var debug     = require('debug')('PostgresRepo');
+var pg        = require('pg');
+var sqlParams = require('sql-params');
+var Client    = require('pg').Client;
 
 /**
  * Repository interface around a PostgreSQL table
@@ -34,25 +35,16 @@ PostgresRepo.prototype.query = function(sql, params)
   params = params || [];
 
   // Translate the args
-  var _ref = this._prepareArgs(sql, params);
-  sql = _ref.sql;
-  params = _ref.args;
+  var opts = sqlParams(sql, params);
 
-  debug('query: %s', sql);
-  debug('params: %s', params.join(','));
-
-  // build the query
-  var query = {
-    text: sql,
-    values: params,
-    rowMode: 'array'
-  };
+  debug('query: %s', opts.text);
+  debug('params: %s', opts.values.join(','));
 
   // Attempt to get a client from the pool and execute the query
   var _this = this;
   return this._getClient().then(function(client) {
     return new Promise(function(resolve, reject) {
-      client.query(query, function(err, result) {
+      client.query(opts, function(err, result) {
         _this._freeClient(client);
         _this._logPool();
         if (err) return reject (err);
@@ -206,47 +198,6 @@ PostgresRepo.prototype.update = function(item)
   values.push(item[this._primaryKey]);
   sql += ' RETURNING *';
   return this.query(sql, values).then(firstOrNull);
-};
-
-/**
- * Given a hash and parametric sql string, swap all of the @vars into $N args
- * and create an array
- * @param {string} sql Parametric sql string
- * @param {object} hash All of the named arguments
- * @return {{sql:string, args:array.<any>}}
- */
-PostgresRepo.prototype._prepareArgs = function(sql, hash)
-{
-  var args = [];
-
-  var keys = sql.match(/@\S+/g);
-  var aKeys = sql.match(/\$\d+/g);
-
-  if (keys && aKeys)
-    throw new Error(
-      'Cannot use both array-style and object-style parametric values');
-
-  // Array-style (native)
-  if (aKeys) {
-    return { sql: sql, args: hash };
-  }
-
-  // No params
-  if (!keys) {
-    return { sql: sql, args: args };
-  }
-
-  var n = 1;
-  keys.forEach(function(key) {
-    key = key.substr(1);
-    var val = hash[key];
-    if (val === undefined)
-      throw new Error('No value for @' + key + ' provided');
-    args.push(val);
-    sql = sql.replace('@' + key, '$' + n++);
-  });
-
-  return { sql: sql, args: args };
 };
 
 function firstOrNull(result)
