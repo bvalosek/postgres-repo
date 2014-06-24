@@ -1,5 +1,9 @@
 # Change History
 
+## 1.2.0 (2014-06-23)
+
+* Connection string passed to repo can be a `PostgresFacade` now
+
 ## 1.1.2 (2014-06-09)
 
 * Added a few missing files

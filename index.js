@@ -34,6 +34,11 @@ PostgresRepo.prototype.query = function(sql, params)
 {
   params = params || [];
 
+  // Duck type into facade
+  if (this._connection.query && this._connection._url) {
+    return this._connection.query(sql, params);
+  }
+
   // Translate the args
   var opts = sqlParams(sql, params);
 
